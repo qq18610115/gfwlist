@@ -1,0 +1,32 @@
+name: Update gfwlist.pac automatically
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天0点 UTC执行一次
+  workflow_dispatch:      # 可手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Download upstream pac file
+      run: curl -L https://raw.githubusercontent.com/petronny/gfwlist2pac/master/gfwlist.pac -o gfwlist_upstream.pac
+
+    - name: Replace 127.0.0.1:1080 to 192.168.10.2:1080
+      run: |
+        sed -e 's/127.0.0.1:1080/192.168.10.2:1080/g' gfwlist_upstream.pac > gfwlist.pac
+
+    - name: Commit & push if changed
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        if git diff --quiet gfwlist.pac; then
+          echo "No change in gfwlist.pac, nothing to commit."
+        else
+          git add gfwlist.pac
+          git commit -m "Auto update gfwlist.pac from upstream, with proxy address replaced"
+          git push
+        fi
